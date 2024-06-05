@@ -7,6 +7,9 @@ class WheelLeggedCfg(LeggedRobotCfg):
         num_privileged_obs = None
         num_actions = 6  # 4 jonit motors + 2 wheel motors
 
+    class terrain(LeggedRobotCfg.terrain):
+        mesh_type = "plane"
+
     class commands:
         curriculum = False
         max_curriculum = 1.0
@@ -70,7 +73,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
         self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = True  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = (
-            True  # Some .obj meshes must be flipped from y-up to z-up
+            False  # Some .obj meshes must be flipped from y-up to z-up
         )
 
         density = 0.001

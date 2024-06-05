@@ -39,6 +39,43 @@ class WheelLegged(LeggedRobot):
 
         self.pi = torch.acos(torch.zeros(1, device=self.device)) * 2
 
+    def step(self, actions):
+        """Apply actions, simulate, call self.post_physics_step()
+
+        Args:
+            actions (torch.Tensor): Tensor of shape (num_envs, num_actions_per_env)
+        """
+        clip_actions = self.cfg.normalization.clip_actions
+        self.actions = torch.clip(actions, -clip_actions, clip_actions).to(self.device)
+        # step physics and render each frame
+        self.render()
+        for _ in range(self.cfg.control.decimation):
+            self.leg_observer()
+            self.torques = self._compute_torques(self.actions).view(self.torques.shape)
+            self.gym.set_dof_actuation_force_tensor(
+                self.sim, gymtorch.unwrap_tensor(self.torques)
+            )
+            self.gym.simulate(self.sim)
+            if self.device == "cpu":
+                self.gym.fetch_results(self.sim, True)
+            self.gym.refresh_dof_state_tensor(self.sim)
+        self.post_physics_step()
+
+        # return clipped obs, clipped states (None), rewards, dones and infos
+        clip_obs = self.cfg.normalization.clip_observations
+        self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
+        if self.privileged_obs_buf is not None:
+            self.privileged_obs_buf = torch.clip(
+                self.privileged_obs_buf, -clip_obs, clip_obs
+            )
+        return (
+            self.obs_buf,
+            self.privileged_obs_buf,
+            self.rew_buf,
+            self.reset_buf,
+            self.extras,
+        )
+
     def leg_forward_kinematics(self, theta_hip, theta_knee):
         wheel_x = self.cfg.parameter.leg.l_thigh * torch.cos(
             theta_hip
@@ -50,20 +87,7 @@ class WheelLegged(LeggedRobot):
         theta_l = torch.arctan2(wheel_y, wheel_x) - self.pi / 2
         return l, theta_l
 
-    def compute_observations(self):
-        """
-        3   base_ang_vel: Body IMU feedback
-        3   projected_gravity: Body IMU feedback
-        2   theta_l
-        2   theta_l_dot
-        2   l
-        2   l_dot
-        2   dof_pos (wheels)
-        2   dof_vel (wheels)
-        3   commands: Target vx, vy, wz
-        6   actions: Motor target position
-        Total: 27
-        """
+    def leg_observer(self):
         # Leg forward kinematics
         self.theta_hip = torch.cat(
             (self.dof_pos[:, 0].unsqueeze(1), -self.dof_pos[:, 3].unsqueeze(1)), dim=1
@@ -94,6 +118,20 @@ class WheelLegged(LeggedRobot):
         self.l_dot = (l_hat - self.l) / dt
         self.theta_l_dot = (theta_l_hat - self.theta_l) / dt
 
+    def compute_observations(self):
+        """
+        3   base_ang_vel: Body IMU feedback
+        3   projected_gravity: Body IMU feedback
+        2   theta_l
+        2   theta_l_dot
+        2   l
+        2   l_dot
+        2   dof_pos (wheels)
+        2   dof_vel (wheels)
+        3   commands: Target vx, vy, wz
+        6   actions: Motor target position
+        Total: 27
+        """
         # Load observation buffer
         self.obs_buf = torch.cat(
             (
