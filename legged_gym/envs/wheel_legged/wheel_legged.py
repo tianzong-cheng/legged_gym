@@ -328,6 +328,7 @@ class WheelLegged(LeggedRobot):
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
+            self.heading = heading
             self.commands[:, 1] = torch.clip(
                 self.cfg.commands.kp_follow * wrap_to_pi(self.commands[:, 3] - heading),
                 self.cfg.commands.ranges.ang_vel_yaw[0],
@@ -751,6 +752,10 @@ class WheelLegged(LeggedRobot):
             self.num_envs, 2, dtype=torch.float, device=self.device, requires_grad=False
         )
 
+        self.heading = torch.zeros(
+            self.num_envs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(
             self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
@@ -786,7 +791,8 @@ class WheelLegged(LeggedRobot):
 
     def _reward_tracking_ang_vel(self):
         # Tracking of angular velocity commands (yaw)
-        ang_vel_error = torch.square(self.commands[:, 1] - self.base_ang_vel[:, 1])
+        # TODO: check whether index is correct
+        ang_vel_error = torch.square(self.commands[:, 1] - self.base_ang_vel[:, 2])
         return torch.exp(-ang_vel_error / self.cfg.rewards.tracking_sigma)
 
     def _reward_base_height(self):

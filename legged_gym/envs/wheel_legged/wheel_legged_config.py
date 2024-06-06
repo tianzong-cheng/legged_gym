@@ -11,8 +11,8 @@ class WheelLeggedCfg(LeggedRobotCfg):
         mesh_type = "plane"
 
     class commands(LeggedRobotCfg.commands):
-        curriculum = False
-        max_curriculum = 1.0
+        curriculum = True
+        max_curriculum = 3.0
         num_commands = 4  # lin_vel_x, ang_vel_yaw, height, heading
         resampling_time = 5.0  # time before command are changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
@@ -178,7 +178,7 @@ class WheelLeggedCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = "ActorCritic"
         algorithm_class_name = "PPO"
         num_steps_per_env = 48  # per iteration
-        max_iterations = 1500  # number of policy updates
+        max_iterations = 2000  # number of policy updates
 
         # logging
         save_interval = 50  # check for potential saves every this many iterations
