@@ -4,28 +4,28 @@ from legged_gym.envs.base.legged_robot_config import LeggedRobotCfg, LeggedRobot
 class WheelLeggedCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
         num_observations = 27
-        num_privileged_obs = None
+        num_privileged_obs = 68
         num_actions = 6  # 4 jonit motors + 2 wheel motors
 
     class terrain(LeggedRobotCfg.terrain):
         mesh_type = "plane"
 
-    class commands:
+    class commands(LeggedRobotCfg.commands):
         curriculum = False
         max_curriculum = 1.0
         num_commands = 4  # lin_vel_x, ang_vel_yaw, height, heading
-        resampling_time = 4.0  # time before command are changed[s]
+        resampling_time = 5.0  # time before command are changed[s]
         heading_command = True  # if true: compute ang vel command from heading error
 
-        class ranges:
+        class ranges(LeggedRobotCfg.commands.ranges):
             lin_vel_x = [-1.0, 1.0]  # min max [m/s]
-            ang_vel_yaw = [-1, 1]  # min max [rad/s]
-            height = [0.15, 0.38]  # min max [m]
+            ang_vel_yaw = [-3.14, 3.14]  # min max [rad/s]
+            height = [0.1, 0.25]  # min max [m]
             heading = [-3.14, 3.14]
 
         kp_follow = 1.5
 
-    class init_state:
+    class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.25]  # x,y,z [m]
         rot = [0.0, 0.0, 0.0, 1.0]  # x,y,z,w [quat]
         lin_vel = [0.0, 0.0, 0.0]  # x,y,z [m/s]
@@ -46,7 +46,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
         stiffness = {"joint": 0.0, "wheel": 0.0}
         damping = {"joint": 0.0, "wheel": 0.5}
         action_scale = 0.5  # Why do we need action scales?
-        decimation = 4
+        decimation = 2
 
         kp_theta_l = 50.0  # [N*m/rad]
         kd_theta_l = 3.0  # [N*m*s/rad]
@@ -58,9 +58,9 @@ class WheelLeggedCfg(LeggedRobotCfg):
         action_scale_vel = 10.0
 
         l_offset = 0.175
-        f_feedforward = 0.0
+        f_feedforward = 40.0
 
-    class asset:
+    class asset(LeggedRobotCfg.asset):
         file = "{LEGGED_GYM_ROOT_DIR}/resources/robots/wheel_legged/urdf/wl.urdf"
         name = "WheelLegged"  # actor name
         foot_name = "None"  # name of the feet bodies, used to index body state and contact force tensors
@@ -70,7 +70,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
         collapse_fixed_joints = True  # merge bodies connected by fixed joints. Specific fixed joints can be kept by adding " <... dont_collapse="true">
         fix_base_link = False  # fixe the base of the robot
         default_dof_drive_mode = 3  # see GymDofDriveModeFlags (0 is none, 1 is pos tgt, 2 is vel tgt, 3 effort)
-        self_collisions = 0  # 1 to disable, 0 to enable...bitwise filter
+        self_collisions = 1  # 1 to disable, 0 to enable...bitwise filter
         replace_cylinder_with_capsule = True  # replace collision cylinders with capsules, leads to faster/more stable simulation
         flip_visual_attachments = (
             False  # Some .obj meshes must be flipped from y-up to z-up
@@ -84,15 +84,57 @@ class WheelLeggedCfg(LeggedRobotCfg):
         armature = 0.0
         thickness = 0.01
 
+    class domain_rand(LeggedRobotCfg.domain_rand):
+        randomize_friction = True
+        friction_range = [0.1, 1.5]
+        randomize_base_mass = True
+        added_mass_range = [-3.0, 3.0]
+        push_robots = True
+        push_interval_s = 7
+        max_push_vel_xy = 2
+
+    class rewards(LeggedRobotCfg.rewards):
+        class scales:
+            tracking_lin_vel = 1.0
+            tracking_lin_vel_enhance = 1.0
+            tracking_ang_vel = 1.0
+
+            base_height = 1.0
+            nominal_state = -0.1
+            lin_vel_z = -2.0
+            ang_vel_xy = -0.05
+            orientation = -10.0
+
+            dof_vel = -5e-5
+            dof_acc = -2.5e-7
+            torques = -0.0001
+            action_rate = -0.01
+            action_smooth = -0.01
+
+            collision = -1.0
+            dof_pos_limits = -1.0
+
+        only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
+        tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
+        soft_dof_pos_limit = (
+            0.97  # percentage of urdf limits, values above this limit are penalized
+        )
+        soft_dof_vel_limit = 1.0
+        soft_torque_limit = 1.0
+        base_height_target = 0.18
+        max_contact_force = 100.0  # forces above this value are penalized
+
     class normalization(LeggedRobotCfg.normalization):
         class obs_scales(LeggedRobotCfg.normalization.obs_scales):
             lin_vel = 2.0
             ang_vel = 0.25
             dof_pos = 1.0
             dof_vel = 0.05
+            dof_acc = 0.0025
             height_measurements = 5.0
-            l = 1.0
-            l_dot = 1.0
+            torque = 0.05
+            l = 5.0
+            l_dot = 0.25
 
         clip_observations = 100.0
         clip_actions = 100.0
@@ -107,8 +149,8 @@ class WheelLeggedCfgPPO(LeggedRobotCfgPPO):
     seed = 1
     runner_class_name = "OnPolicyRunner"
 
-    class policy:
-        init_noise_std = 1.0
+    class policy(LeggedRobotCfgPPO.policy):
+        init_noise_std = 0.5
         actor_hidden_dims = [128, 64, 32]
         critic_hidden_dims = [256, 128, 64]
         activation = "elu"  # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
@@ -117,7 +159,7 @@ class WheelLeggedCfgPPO(LeggedRobotCfgPPO):
         # rnn_hidden_size = 512
         # rnn_num_layers = 1
 
-    class algorithm:
+    class algorithm(LeggedRobotCfgPPO.algorithm):
         # training params
         value_loss_coef = 1.0
         use_clipped_value_loss = True
@@ -129,18 +171,18 @@ class WheelLeggedCfgPPO(LeggedRobotCfgPPO):
         schedule = "adaptive"  # could be adaptive, fixed
         gamma = 0.99
         lam = 0.95
-        desired_kl = 0.01
+        desired_kl = 0.005
         max_grad_norm = 1.0
 
-    class runner:
+    class runner(LeggedRobotCfgPPO.runner):
         policy_class_name = "ActorCritic"
         algorithm_class_name = "PPO"
-        num_steps_per_env = 24  # per iteration
+        num_steps_per_env = 48  # per iteration
         max_iterations = 1500  # number of policy updates
 
         # logging
         save_interval = 50  # check for potential saves every this many iterations
-        experiment_name = "test"
+        experiment_name = "wheel_legged"
         run_name = ""
         # load and resume
         resume = False
