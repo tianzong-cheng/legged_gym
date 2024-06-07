@@ -23,7 +23,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
             height = [0.1, 0.25]  # min max [m]
             heading = [-3.14, 3.14]
 
-        kp_follow = 1.5
+        kp_follow = 4
 
     class init_state(LeggedRobotCfg.init_state):
         pos = [0.0, 0.0, 0.25]  # x,y,z [m]
@@ -107,7 +107,8 @@ class WheelLeggedCfg(LeggedRobotCfg):
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7
-            torques = -0.0001
+            joint_torques = -0.0001
+            wheel_torques = -0.0001
             action_rate = -0.01
             action_smooth = -0.01
 

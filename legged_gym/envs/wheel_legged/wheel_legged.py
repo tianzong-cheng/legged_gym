@@ -68,6 +68,41 @@ class WheelLegged(LeggedRobot):
             self.extras,
         )
 
+    def quaternion_to_euler(self, q):
+        """
+        Convert a quaternion to Euler angles (roll, pitch, yaw)
+        q: tensor of shape (N, 4) where each row is [x, y, z, w]
+        returns: tensor of shape (N, 3) where each row is [roll, pitch, yaw]
+        """
+        # Ensure the quaternion is normalized
+        q = q / q.norm(dim=1, keepdim=True)
+
+        x, y, z, w = q[:, 0], q[:, 1], q[:, 2], q[:, 3]
+
+        # Roll (x-axis rotation)
+        sinr_cosp = 2 * (w * x + y * z)
+        cosr_cosp = 1 - 2 * (x * x + y * y)
+        roll = torch.atan2(sinr_cosp, cosr_cosp)
+
+        # Pitch (y-axis rotation)
+        sinp = 2 * (w * y - z * x)
+        pitch = torch.where(
+            torch.abs(sinp) >= 1,
+            torch.sign(sinp) * (torch.pi / 2),  # use 90 degrees if out of range
+            torch.asin(sinp),
+        )
+
+        # Yaw (z-axis rotation)
+        siny_cosp = 2 * (w * z + x * y)
+        cosy_cosp = 1 - 2 * (y * y + z * z)
+        yaw = torch.atan2(siny_cosp, cosy_cosp)
+
+        roll = torch.rad2deg(roll)
+        pitch = torch.rad2deg(pitch)
+        yaw = torch.rad2deg(yaw)
+
+        return torch.stack((roll, pitch, yaw), dim=1)
+
     def post_physics_step(self):
         """check terminations, compute observations and rewards
         calls self._post_physics_step_callback() for common computations
@@ -90,6 +125,7 @@ class WheelLegged(LeggedRobot):
         self.projected_gravity[:] = quat_rotate_inverse(
             self.base_quat, self.gravity_vec
         )
+        self.euler_angles[:] = self.quaternion_to_euler(self.base_quat[:])
         self.dof_acc = (self.last_dof_vel - self.dof_vel) / self.dt
 
         self._post_physics_step_callback()
@@ -726,6 +762,7 @@ class WheelLegged(LeggedRobot):
             self.base_quat, self.root_states[:, 10:13]
         )
         self.projected_gravity = quat_rotate_inverse(self.base_quat, self.gravity_vec)
+        self.euler_angles = self.quaternion_to_euler(self.base_quat)
         if self.cfg.terrain.measure_heights:
             self.height_points = self._init_height_points()
         self.measured_heights = 0
@@ -805,7 +842,7 @@ class WheelLegged(LeggedRobot):
             return torch.exp(-base_height_error / 0.005)
 
     def _reward_nominal_state(self):
-        # return torch.square(self.theta0[:, 0] - self.theta0[:, 1])
+        # Penalize difference in leg angles
         if self.reward_scales["nominal_state"] < 0:
             return torch.square(self.theta_l[:, 0] - self.theta_l[:, 1])
         else:
@@ -826,7 +863,7 @@ class WheelLegged(LeggedRobot):
 
     def _reward_dof_vel(self):
         # Penalize dof velocities
-        return torch.sum(torch.square(self.dof_vel[:, :2]), dim=1) + torch.sum(
+        return torch.sum(torch.square(self.dof_vel[:, 0:2]), dim=1) + torch.sum(
             torch.square(self.dof_vel[:, 3:5]), dim=1
         )
 
@@ -834,9 +871,15 @@ class WheelLegged(LeggedRobot):
         # Penalize dof accelerations
         return torch.sum(torch.square(self.dof_acc), dim=1)
 
-    def _reward_torques(self):
-        # Penalize torques
-        return torch.sum(torch.square(self.torques), dim=1)
+    def _reward_joint_torques(self):
+        # Penalize joint motor torques
+        return torch.sum(torch.square(self.torques[:, 0:2]), dim=1) + torch.sum(
+            torch.square(self.torques[:, 3:5]), dim=1
+        )
+
+    def _reward_wheel_torques(self):
+        # Penalize wheel motor torques
+        return torch.square(self.torques[:, 2]) + torch.square(self.torques[:, 2])
 
     def _reward_action_rate(self):
         # Penalize changes in actions

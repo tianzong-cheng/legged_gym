@@ -93,11 +93,11 @@ def play(args):
             env.commands[:, 2] = 0.18
             env.commands[:, 3] = 0
         elif i % env.max_episode_length < 1000:
-            env.commands[:, 0] = 1.5
+            env.commands[:, 0] = 2.5
             env.commands[:, 2] = 0.18
             env.commands[:, 3] = 0
         elif i % env.max_episode_length < 1500:
-            env.commands[:, 0] = 1.5
+            env.commands[:, 0] = 0
             env.commands[:, 2] = 0.18
             env.commands[:, 3] = 1.5
         elif i % env.max_episode_length < 2000:
@@ -129,8 +129,8 @@ def play(args):
                     "command_heading": env.commands[robot_index, 3].item(),
                     "base_vel_x": env.base_lin_vel[robot_index, 0].item(),
                     "base_vel_yaw": env.base_ang_vel[robot_index, 2].item(),
-                    "base_vel_pitch": env.base_ang_vel[robot_index, 1].item(),
-                    "base_vel_roll": env.base_ang_vel[robot_index, 0].item(),
+                    "base_pitch": env.euler_angles[robot_index, 1].item(),
+                    "base_roll": env.euler_angles[robot_index, 0].item(),
                     "heading": env.heading[robot_index].item(),
                 }
             )
