@@ -861,6 +861,12 @@ class WheelLegged(LeggedRobot):
         # Penalize non flat base orientation
         return torch.sum(torch.square(self.projected_gravity[:, :2]), dim=1)
 
+    def _reward_orientation_exponential(self):
+        # Penalize non flat base orientation
+        return (
+            torch.exp(-(1 - torch.clip(-self.projected_gravity[:, 2], 0, 1)) / 0.01) - 1
+        )
+
     def _reward_dof_vel(self):
         # Penalize dof velocities
         return torch.sum(torch.square(self.dof_vel[:, 0:2]), dim=1) + torch.sum(
@@ -931,3 +937,11 @@ class WheelLegged(LeggedRobot):
             min=0.0
         )
         return torch.sum(out_of_limits, dim=1)
+
+    def _reward_theta_limit(self):
+        MAX_THETA = 0.26
+        reward = (self.theta_l[:, 0] - MAX_THETA).clip(min=0.0)
+        reward -= (self.theta_l[:, 0] + MAX_THETA).clip(max=0.0)
+        reward += (self.theta_l[:, 1] - MAX_THETA).clip(min=0.0)
+        reward -= (self.theta_l[:, 1] + MAX_THETA).clip(max=0.0)
+        return reward

@@ -7,8 +7,50 @@ class WheelLeggedCfg(LeggedRobotCfg):
         num_privileged_obs = 68
         num_actions = 6  # 4 jonit motors + 2 wheel motors
 
-    class terrain(LeggedRobotCfg.terrain):
-        mesh_type = "plane"
+    class terrain:
+        mesh_type = "trimesh"  # "heightfield" # none, plane, heightfield or trimesh
+        horizontal_scale = 0.1  # [m]
+        vertical_scale = 0.005  # [m]
+        border_size = 25  # [m]
+        curriculum = True
+        static_friction = 1.0
+        dynamic_friction = 1.0
+        restitution = 0.0
+        # rough terrain only:
+        measure_heights = True
+        measured_points_x = [
+            -0.8,
+            -0.7,
+            -0.6,
+            -0.5,
+            -0.4,
+            -0.3,
+            -0.2,
+            -0.1,
+            0.0,
+            0.1,
+            0.2,
+            0.3,
+            0.4,
+            0.5,
+            0.6,
+            0.7,
+            0.8,
+        ]  # 1mx1.6m rectangle (without center line)
+        measured_points_y = [-0.5, -0.4, -0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        selected = False  # select a unique terrain type and pass all arguments
+        terrain_kwargs = None  # Dict of arguments for selected terrain
+        max_init_terrain_level = 3  # starting curriculum state
+        terrain_length = 10.0
+        terrain_width = 10.0
+        num_rows = 10  # number of terrain rows (levels)
+        num_cols = 10  # number of terrain cols (types)
+        # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
+        terrain_proportions = [0.3, 0.4, 0.0, 0.3, 0.0]
+        # trimesh only:
+        slope_treshold = (
+            0.75  # slopes above this threshold will be corrected to vertical surfaces
+        )
 
     class commands(LeggedRobotCfg.commands):
         curriculum = True
@@ -19,7 +61,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
 
         class ranges(LeggedRobotCfg.commands.ranges):
             lin_vel_x = [-1.0, 1.0]  # min max [m/s]
-            ang_vel_yaw = [-3.14, 3.14]  # min max [rad/s]
+            ang_vel_yaw = [-6.28, 6.28]  # min max [rad/s]
             height = [0.1, 0.25]  # min max [m]
             heading = [-3.14, 3.14]
 
@@ -103,7 +145,8 @@ class WheelLeggedCfg(LeggedRobotCfg):
             nominal_state = -0.1
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
-            orientation = -10.0
+            orientation = 0.0
+            orientation_exponential = 1.0
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7
@@ -114,6 +157,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
 
             collision = -1.0
             dof_pos_limits = -1.0
+            theta_limit = -1.0
 
         only_positive_rewards = False  # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25  # tracking reward = exp(-error^2/sigma)
