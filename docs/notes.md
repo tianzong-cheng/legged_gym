@@ -95,3 +95,19 @@ self.fail_buf = fail_buf
 - [ ] `_get_env_origins()`
 - [ ] `pre_physics_step()`
   - [ ] Seems not used
+
+# Notes 6/6
+
+- `envs_steps_buf`
+- `_push_robots()`
+- `refresh_rigid_body_state_tensor()`, should be OK
+- Still no curriculum
+  - Command curriculum logic
+- `fail_buf`
+
+# Notes 6/8
+
+- Terrain friction?
+- URDF
+- Fly
+- Sudden loss in friction
