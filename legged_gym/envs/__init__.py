@@ -43,6 +43,11 @@ from .cassie.cassie_config import CassieRoughCfg, CassieRoughCfgPPO
 from .a1.a1_config import A1RoughCfg, A1RoughCfgPPO
 from .wheel_legged.wheel_legged import WheelLegged
 from .wheel_legged.wheel_legged_config import WheelLeggedCfg, WheelLeggedCfgPPO
+from .wheel_legged_universal.wheel_legged_universal import WheelLeggedUniversal
+from .wheel_legged_universal.wheel_legged_universal_config import (
+    WheelLeggedUniversalCfg,
+    WheelLeggedUniversalCfgPPO,
+)
 
 
 import os
@@ -58,4 +63,10 @@ task_registry.register("a1", LeggedRobot, A1RoughCfg(), A1RoughCfgPPO())
 task_registry.register("cassie", Cassie, CassieRoughCfg(), CassieRoughCfgPPO())
 task_registry.register(
     "wheel_legged", WheelLegged, WheelLeggedCfg(), WheelLeggedCfgPPO()
+)
+task_registry.register(
+    "wheel_legged_universal",
+    WheelLeggedUniversal,
+    WheelLeggedUniversalCfg(),
+    WheelLeggedUniversalCfgPPO(),
 )
