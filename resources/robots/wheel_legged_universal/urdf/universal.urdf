@@ -155,7 +155,7 @@
     <limit
       lower="0"
       upper="1.1414"
-      effort="40"
+      effort="60"
       velocity="1000" />
   </joint>
   <link
@@ -190,11 +190,10 @@
     </visual>
     <collision>
       <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
+        xyz="0 0.0125 0"
+        rpy="1.5708 0 0" />
       <geometry>
-        <mesh
-          filename="../meshes/right_wheel.STL" />
+        <cylinder length="0.025" radius="0.06" />
       </geometry>
     </collision>
   </link>
@@ -325,7 +324,7 @@
     <limit
       lower="0"
       upper="1.1414"
-      effort="40"
+      effort="60"
       velocity="1000" />
   </joint>
   <link
@@ -360,11 +359,10 @@
     </visual>
     <collision>
       <origin
-        xyz="0 0 0"
-        rpy="0 0 0" />
+        xyz="0 -0.0125 0"
+        rpy="1.5708 0 0" />
       <geometry>
-        <mesh
-          filename="../meshes/left_wheel.STL" />
+        <cylinder length="0.025" radius="0.06" />
       </geometry>
     </collision>
   </link>
