@@ -63,14 +63,14 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             tracking_ang_vel = 1.0
 
             base_height = 1.0
-            nominal_state = -1
+            nominal_state = -0.1
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = 0.0
             orientation_exponential = 1.0
 
             dof_vel = -5e-5
-            dof_acc = -8e-7
+            dof_acc = -2.5e-7
             joint_torques = -0.0001
             wheel_torques = -0.0001
             action_rate = -0.01
