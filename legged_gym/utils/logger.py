@@ -109,6 +109,22 @@ class Logger:
             a.plot(time, log["base_roll"], label="measured")
         a.set(xlabel="time [s]", ylabel="base ang vel [deg]", title="Base roll")
         a.legend()
+        # plot dof vel
+        a = axs[2, 0]
+        if log["wheel_vel_left"]:
+            a.plot(time, log["wheel_vel_left"], label="left")
+        if log["wheel_vel_right"]:
+            a.plot(time, log["wheel_vel_right"], label="right")
+        a.set(xlabel="time [s]", ylabel="dof vel [rad/s]", title="DOF Velocity")
+        a.legend()
+        # plot wheel torque
+        a = axs[2, 1]
+        if log["wheel_torque_left"]:
+            a.plot(time, log["wheel_torque_left"], label="left")
+        if log["wheel_torque_right"]:
+            a.plot(time, log["wheel_torque_right"], label="right")
+        a.set(xlabel="time [s]", ylabel="Wheel Torque [Nm]", title="Wheel Torque")
+        a.legend()
         plt.show()
 
     def print_rewards(self):

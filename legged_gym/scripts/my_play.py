@@ -105,6 +105,10 @@ def play(args):
             env.commands[:, 2] = 0.18
             env.commands[:, 3] = 1.5
 
+        # mask = env.commands[:, 0] > 0
+        # env.commands[mask, 0] = torch.clip(env.commands[mask, 0], min=2.0)
+        # env.commands[~mask, 0] = torch.clip(env.commands[~mask, 0], max=-2.0)
+
         if RECORD_FRAMES:
             if i % 2:
                 filename = os.path.join(
@@ -132,6 +136,10 @@ def play(args):
                     "base_pitch": env.euler_angles[robot_index, 1].item(),
                     "base_roll": env.euler_angles[robot_index, 0].item(),
                     "heading": env.heading[robot_index].item(),
+                    "wheel_vel_left": env.dof_vel[robot_index, 2].item(),
+                    "wheel_vel_right": env.dof_vel[robot_index, 5].item(),
+                    "wheel_torque_left": env.torque_wheel[robot_index, 0].item(),
+                    "wheel_torque_right": env.torque_wheel[robot_index, 1].item(),
                 }
             )
         elif i == stop_state_log:
