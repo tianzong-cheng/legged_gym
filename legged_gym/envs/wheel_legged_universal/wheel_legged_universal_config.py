@@ -15,7 +15,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
         class ranges(WheelLeggedCfg.commands.ranges):
             lin_vel_x = [-1.0, 1.0]  # min max [m/s]
             ang_vel_yaw = [-6.28, 6.28]  # min max [rad/s]
-            height = [0.15, 0.3]  # min max [m]
+            height = [0.16, 0.34]  # min max [m]
             heading = [-3.14, 3.14]
 
         kp_follow = 4
@@ -44,11 +44,11 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
         kp_l = 900.0  # [N/m]
         kd_l = 20.0  # [N*s/m]
 
-        action_scale_theta_l = 0.5
+        action_scale_theta_l = 0.2
         action_scale_l = 0.1
-        action_scale_vel = 10.0
+        action_scale_vel = 20.0
 
-        l_offset = 0.2
+        l_offset = 0.25
         f_feedforward = 100.0
 
     class asset(WheelLeggedCfg.asset):
@@ -63,7 +63,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             tracking_ang_vel = 1.0
 
             base_height = 1.0
-            nominal_state = -0.1
+            nominal_state = -2.0
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = 0.0
