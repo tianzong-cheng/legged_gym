@@ -99,6 +99,8 @@ class WheelLeggedUniversal(WheelLegged):
         self.torque_wheel = self.d_gains[[2, 5]] * (
             wheel_speed_ref - self.dof_vel[:, [2, 5]]
         )
+        self.torque_wheel = torch.clip(self.torque_wheel, -5, 5)
+
         t_hip, t_knee = self.VMC(
             self.force_leg + self.cfg.control.f_feedforward, self.torque_leg
         )
