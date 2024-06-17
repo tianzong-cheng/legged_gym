@@ -945,3 +945,18 @@ class WheelLegged(LeggedRobot):
         reward += (self.theta_l[:, 1] - MAX_THETA).clip(min=0.0)
         reward -= (self.theta_l[:, 1] + MAX_THETA).clip(max=0.0)
         return reward
+
+    def _reward_wheel_slip(self):
+        vel_wheel = (self.dof_vel[:, 2] + self.dof_vel[:, 5]) * 0.06 / 2
+        vel_body = (
+            self.base_lin_vel[:, 0]
+            + (
+                self.l_dot[:, 0] * torch.sin(self.theta_l[:, 0])
+                + self.l[:, 0] * torch.cos(self.theta_l[:, 0]) * self.theta_l_dot[:, 0]
+                + self.l_dot[:, 1] * torch.sin(self.theta_l[:, 1])
+                + self.l[:, 1] * torch.cos(self.theta_l[:, 1]) * self.theta_l_dot[:, 1]
+            )
+            / 2
+        )
+        self.slip = torch.square(vel_wheel - vel_body)
+        return self.slip

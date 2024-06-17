@@ -67,7 +67,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             lin_vel_z = -2.0
             ang_vel_xy = -0.05
             orientation = 0.0
-            orientation_exponential = 1.0
+            orientation_exponential = 2.0
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7
@@ -79,6 +79,8 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             collision = -1.0
             dof_pos_limits = -1.0
             theta_limit = -1.0
+
+            wheel_slip = -0.1
 
     class parameter:
         class leg:
