@@ -90,19 +90,19 @@ def play(args):
 
         if i % env.max_episode_length < 200:
             env.commands[:, 0] = 0
-            env.commands[:, 2] = 0.18
+            env.commands[:, 2] = 0.25
+            env.commands[:, 3] = 0
+        elif i % env.max_episode_length < 600:
+            env.commands[:, 0] = 2.5
+            env.commands[:, 2] = 0.25
             env.commands[:, 3] = 0
         elif i % env.max_episode_length < 1000:
-            env.commands[:, 0] = 2.5
-            env.commands[:, 2] = 0.18
-            env.commands[:, 3] = 0
-        elif i % env.max_episode_length < 1500:
             env.commands[:, 0] = 0
-            env.commands[:, 2] = 0.18
+            env.commands[:, 2] = 0.25
             env.commands[:, 3] = 1.5
         elif i % env.max_episode_length < 2000:
             env.commands[:, 0] = -1
-            env.commands[:, 2] = 0.18
+            env.commands[:, 2] = 0.25
             env.commands[:, 3] = 1.5
 
         # mask = env.commands[:, 0] > 0
@@ -140,6 +140,9 @@ def play(args):
                     "wheel_vel_right": env.dof_vel[robot_index, 5].item(),
                     "wheel_torque_left": env.torque_wheel[robot_index, 0].item(),
                     "wheel_torque_right": env.torque_wheel[robot_index, 1].item(),
+                    "wheel_slip": env.slip[robot_index].item(),
+                    "command_height": env.commands[robot_index, 2].item(),
+                    "base_height": env.base_height[robot_index].item(),
                 }
             )
         elif i == stop_state_log:

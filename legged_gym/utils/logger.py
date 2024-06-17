@@ -77,7 +77,7 @@ class Logger:
             a.plot(time, log["base_vel_x"], label="measured")
         if log["command_x"]:
             a.plot(time, log["command_x"], label="commanded")
-        a.set(xlabel="time [s]", ylabel="base lin vel [m/s]", title="Base velocity x")
+        a.set(xlabel="", ylabel="", title="Base velocity x")
         a.legend()
         # plot base vel yaw
         a = axs[0, 1]
@@ -85,9 +85,7 @@ class Logger:
             a.plot(time, log["base_vel_yaw"], label="measured")
         if log["command_yaw"]:
             a.plot(time, log["command_yaw"], label="commanded")
-        a.set(
-            xlabel="time [s]", ylabel="base ang vel [rad/s]", title="Base velocity yaw"
-        )
+        a.set(xlabel="", ylabel="", title="Base velocity yaw")
         a.legend()
         # plot heading
         a = axs[0, 2]
@@ -95,19 +93,27 @@ class Logger:
             a.plot(time, log["heading"], label="measured")
         if log["command_heading"]:
             a.plot(time, log["command_heading"], label="commanded")
-        a.set(xlabel="time [s]", ylabel="Heading [rad]", title="Heading")
+        a.set(xlabel="", ylabel="", title="Heading")
         a.legend()
         # plot base vel yaw
         a = axs[1, 0]
         if log["base_pitch"]:
             a.plot(time, log["base_pitch"], label="measured")
-        a.set(xlabel="time [s]", ylabel="base ang vel [deg]", title="Base pitch")
+        a.set(xlabel="", ylabel="", title="Base pitch")
         a.legend()
         # plot base vel yaw
         a = axs[1, 1]
         if log["base_roll"]:
             a.plot(time, log["base_roll"], label="measured")
-        a.set(xlabel="time [s]", ylabel="base ang vel [deg]", title="Base roll")
+        a.set(xlabel="", ylabel="", title="Base roll")
+        a.legend()
+        # plot base height
+        a = axs[1, 2]
+        if log["base_height"]:
+            a.plot(time, log["base_height"], label="measured")
+        if log["command_height"]:
+            a.plot(time, log["command_height"], label="commanded")
+        a.set(xlabel="", ylabel="", title="Base Height")
         a.legend()
         # plot dof vel
         a = axs[2, 0]
@@ -115,7 +121,7 @@ class Logger:
             a.plot(time, log["wheel_vel_left"], label="left")
         if log["wheel_vel_right"]:
             a.plot(time, log["wheel_vel_right"], label="right")
-        a.set(xlabel="time [s]", ylabel="dof vel [rad/s]", title="DOF Velocity")
+        a.set(xlabel="", ylabel="", title="Wheel Angular Velocity")
         a.legend()
         # plot wheel torque
         a = axs[2, 1]
@@ -123,7 +129,13 @@ class Logger:
             a.plot(time, log["wheel_torque_left"], label="left")
         if log["wheel_torque_right"]:
             a.plot(time, log["wheel_torque_right"], label="right")
-        a.set(xlabel="time [s]", ylabel="Wheel Torque [Nm]", title="Wheel Torque")
+        a.set(xlabel="", ylabel="", title="Wheel Torque")
+        a.legend()
+        # plot wheel slip
+        a = axs[2, 2]
+        if log["wheel_slip"]:
+            a.plot(time, log["wheel_slip"], label="measured")
+        a.set(xlabel="", ylabel="", title="Wheel Slip")
         a.legend()
         plt.show()
 
