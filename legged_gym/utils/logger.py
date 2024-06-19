@@ -133,8 +133,10 @@ class Logger:
         a.legend()
         # plot wheel slip
         a = axs[2, 2]
-        if log["wheel_slip"]:
-            a.plot(time, log["wheel_slip"], label="measured")
+        if log["wheel_slip_left"]:
+            a.plot(time, log["wheel_slip_left"], label="left")
+        if log["wheel_slip_right"]:
+            a.plot(time, log["wheel_slip_right"], label="right")
         a.set(xlabel="", ylabel="", title="Wheel Slip")
         a.legend()
         plt.show()

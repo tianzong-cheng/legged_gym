@@ -140,7 +140,8 @@ def play(args):
                     "wheel_vel_right": env.dof_vel[robot_index, 5].item(),
                     "wheel_torque_left": env.torque_wheel[robot_index, 0].item(),
                     "wheel_torque_right": env.torque_wheel[robot_index, 1].item(),
-                    "wheel_slip": env.slip[robot_index].item(),
+                    "wheel_slip_left": env.slip_left[robot_index].item(),
+                    "wheel_slip_right": env.slip_right[robot_index].item(),
                     "command_height": env.commands[robot_index, 2].item(),
                     "base_height": env.base_height[robot_index].item(),
                 }
