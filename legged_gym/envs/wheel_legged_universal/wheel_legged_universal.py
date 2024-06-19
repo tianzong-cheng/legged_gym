@@ -50,6 +50,63 @@ class WheelLeggedUniversal(WheelLegged):
         self.l_dot = (l_hat - self.l) / dt
         self.theta_l_dot = (theta_l_hat - self.theta_l) / dt
 
+    def compute_observations(self):
+        """
+        3   base_ang_vel: Body IMU feedback
+        3   projected_gravity: Body IMU feedback
+        2   theta_l
+        2   theta_l_dot
+        2   l
+        2   l_dot
+        2   dof_pos (wheels)
+        2   dof_vel (wheels)
+        3   commands: Target vx, vy, wz
+        6   actions: Motor target position
+        Total: 27
+        """
+        # Load observation buffer
+        self.obs_buf = torch.cat(
+            (
+                self.base_ang_vel * self.obs_scales.ang_vel,
+                self.projected_gravity,
+                self.theta_l * self.obs_scales.dof_pos,
+                self.theta_l_dot * self.obs_scales.dof_vel,
+                self.l * self.obs_scales.l,
+                self.l_dot * self.obs_scales.l_dot,
+                self.dof_pos[:, [2, 5]] * self.obs_scales.dof_pos,
+                self.dof_vel[:, [2, 5]] * self.obs_scales.dof_vel,
+                self.commands[:, :3] * self.commands_scale,
+                self.actions,
+            ),
+            dim=-1,
+        )
+        heights = (
+            self.root_states[:, 2].unsqueeze(1) * self.obs_scales.height_measurements
+        )
+        self.privileged_obs_buf = torch.cat(
+            (
+                self.base_lin_vel * self.obs_scales.lin_vel,
+                self.obs_buf,
+                self.last_actions,
+                self.last_last_actions,
+                (self.dof_pos - self.default_dof_pos) * self.obs_scales.dof_pos,
+                self.dof_vel * self.obs_scales.dof_vel,
+                self.dof_acc * self.obs_scales.dof_acc,
+                heights,
+                self.torques * self.obs_scales.torque,
+                self.friction_coeffs.view(self.num_envs, 1),
+                self.slip_left.unsqueeze(1),
+                self.slip_right.unsqueeze(1),
+            ),
+            dim=-1,
+        )
+        # add noise if needed
+        # Randomly generate noise between -noise_scale and noise_scale
+        if self.add_noise:
+            self.obs_buf += (
+                2 * torch.rand_like(self.obs_buf) - 1
+            ) * self.noise_scale_vec
+
     def _compute_torques(self, actions):
         """
         actions[:, 0]   theta_l reference

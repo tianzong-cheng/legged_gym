@@ -729,6 +729,11 @@ class WheelLegged(LeggedRobot):
         )
         self.last_dof_vel = torch.zeros_like(self.dof_vel)
         self.last_root_vel = torch.zeros_like(self.root_states[:, 7:13])
+        self.slip_left = torch.zeros(
+            self.num_envs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.slip_right = torch.zeros_like(self.slip_left)
+        self.slip = torch.zeros_like(self.slip_left)
         self.commands = torch.zeros(
             self.num_envs,
             self.cfg.commands.num_commands,
@@ -947,16 +952,22 @@ class WheelLegged(LeggedRobot):
         return reward
 
     def _reward_wheel_slip(self):
-        vel_wheel = (self.dof_vel[:, 2] + self.dof_vel[:, 5]) * 0.06 / 2
-        vel_body = (
+        vel_wheel_left = self.dof_vel[:, 2] * self.cfg.parameter.r_w
+        vel_wheel_right = self.dof_vel[:, 5] * self.cfg.parameter.r_w
+        vel_body_left = (
             self.base_lin_vel[:, 0]
-            + (
-                self.l_dot[:, 0] * torch.sin(self.theta_l[:, 0])
-                + self.l[:, 0] * torch.cos(self.theta_l[:, 0]) * self.theta_l_dot[:, 0]
-                + self.l_dot[:, 1] * torch.sin(self.theta_l[:, 1])
-                + self.l[:, 1] * torch.cos(self.theta_l[:, 1]) * self.theta_l_dot[:, 1]
-            )
-            / 2
+            + self.l_dot[:, 0] * torch.sin(self.theta_l[:, 0])
+            + self.l[:, 0] * torch.cos(self.theta_l[:, 0]) * self.theta_l_dot[:, 0]
+            - self.base_ang_vel[:, 2] * self.cfg.parameter.r_l
         )
-        self.slip = torch.square(vel_wheel - vel_body)
+        vel_body_right = (
+            self.base_lin_vel[:, 0]
+            + self.l_dot[:, 1] * torch.sin(self.theta_l[:, 1])
+            + self.l[:, 1] * torch.cos(self.theta_l[:, 1]) * self.theta_l_dot[:, 1]
+            + self.base_ang_vel[:, 2] * self.cfg.parameter.r_l
+        )
+        self.slip_left = torch.square(vel_wheel_left - vel_body_left)
+        self.slip_right = torch.square(vel_wheel_right - vel_body_right)
+        self.slip = self.slip_left + self.slip_right
+
         return self.slip

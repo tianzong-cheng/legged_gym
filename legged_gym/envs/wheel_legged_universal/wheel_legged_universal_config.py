@@ -5,6 +5,11 @@ from legged_gym.envs.wheel_legged.wheel_legged_config import (
 
 
 class WheelLeggedUniversalCfg(WheelLeggedCfg):
+    class env(WheelLeggedCfg.env):
+        num_observations = 27
+        num_privileged_obs = 70
+        num_actions = 6  # 4 jonit motors + 2 wheel motors
+
     class commands(WheelLeggedCfg.commands):
         curriculum = True
         max_curriculum = 3.0
@@ -80,12 +85,15 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             dof_pos_limits = -1.0
             theta_limit = -1.0
 
-            wheel_slip = -0.1
+            wheel_slip = -0.01
 
     class parameter:
         class leg:
             l_thigh = 0.25
             l_shank = 0.3
+
+        r_w = 0.06
+        r_l = 0.2296
 
 
 class WheelLeggedUniversalCfgPPO(WheelLeggedCfgPPO):
