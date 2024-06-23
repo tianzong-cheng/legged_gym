@@ -28,6 +28,8 @@ class ActorCritic(nn.Module):
         return actions_mean
 
 
+device = "cuda"
+
 path = "/home/rl/workspace/legged_gym/logs/wheel_legged_universal/Jun18_16-28-41_/model_80000.pt"
 loaded_dict = torch.load(path)
 # Filter out actor parameters
@@ -39,35 +41,58 @@ actor_critic = ActorCritic()
 actor_critic.load_state_dict(actor_state_dict)
 
 actor_critic.eval()
-# actor_critic.to(device)
+actor_critic.to(device)
 policy = actor_critic.act_inference
 
 # --------------------------------------------------
 
-# Example float values
-base_ang_vel = torch.tensor([0.5, 0.5, 0.5])
-projected_gravity = torch.tensor([0, 0, 1])
-theta_l = torch.tensor([0, 0])
-theta_l_dot = torch.tensor([0, 0])
-l = torch.tensor([0.3, 0.3])
-l_dot = torch.tensor([0, 0])
-dof_pos = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-dof_vel = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6])
-commands = torch.tensor([0.5, 0.4, 0.3, 0.2, 0.1])
-actions = torch.tensor([0, 0, 0, 0, 0, 0])
+# Scaling factors
+obs_scales = {
+    "lin_vel": 2.0,
+    "ang_vel": 0.25,
+    "dof_pos": 1.0,
+    "dof_vel": 0.05,
+    "dof_acc": 0.0025,
+    "height_measurements": 5.0,
+    "torque": 0.05,
+    "l": 5.0,
+    "l_dot": 0.25,
+}
+commands_scale = torch.tensor(
+    [
+        obs_scales["lin_vel"],
+        obs_scales["ang_vel"],
+        obs_scales["height_measurements"],
+    ],
+    device=device,
+    requires_grad=False,
+)
 
-# Scaling factors (assuming these are also tensors)
-obs_scales = {"ang_vel": 1.0, "dof_pos": 1.0, "dof_vel": 1.0, "l": 1.0, "l_dot": 1.0}
-commands_scale = 1.0
+base_ang_vel = (
+    torch.tensor([0.5, 0.5, 0.5], device=device, requires_grad=False)
+    * obs_scales["ang_vel"]
+)
+projected_gravity = torch.tensor([0, 0, 1], device=device, requires_grad=False)
+theta_l = (
+    torch.tensor([0, 0], device=device, requires_grad=False) * obs_scales["dof_pos"]
+)
+theta_l_dot = (
+    torch.tensor([0, 0], device=device, requires_grad=False) * obs_scales["dof_vel"]
+)
+l = torch.tensor([0.3, 0.3], device=device, requires_grad=False) * obs_scales["l"]
+l_dot = torch.tensor([0, 0], device=device, requires_grad=False) * obs_scales["l_dot"]
+dof_pos = (
+    torch.tensor([0.1, 0.2], device=device, requires_grad=False) * obs_scales["dof_pos"]
+)
+dof_vel = (
+    torch.tensor([0.1, 0.2], device=device, requires_grad=False) * obs_scales["dof_vel"]
+)
+commands = (
+    torch.tensor([0.5, 0.4, 0.3], device=device, requires_grad=False) * commands_scale
+)
+actions = torch.tensor([0, 0, 0, 0, 0, 0], device=device, requires_grad=False)
 
-# Convert float values to tensors and apply scaling
-
-# Select specific columns from dof_pos and dof_vel
-dof_pos_selected = dof_pos[[2, 5]] * obs_scales["dof_pos"]
-dof_vel_selected = dof_vel[[2, 5]] * obs_scales["dof_vel"]
-commands_scaled = commands[:3] * commands_scale
-
-# Concatenate all tensors along the last dimension
+obs_buf = torch.zeros(27, device=device, requires_grad=False)
 obs_buf = torch.cat(
     (
         base_ang_vel,
@@ -76,9 +101,9 @@ obs_buf = torch.cat(
         theta_l_dot,
         l,
         l_dot,
-        dof_pos_selected,
-        dof_vel_selected,
-        commands_scaled,
+        dof_pos,
+        dof_vel,
+        commands,
         actions,
     ),
     dim=-1,
@@ -86,6 +111,7 @@ obs_buf = torch.cat(
 
 print(obs_buf)
 
-actions = policy(obs_buf.detach())
+output = torch.zeros(6, device=device, requires_grad=False)
+output = policy(obs_buf.detach())
 
-print(actions)
+print(output)
