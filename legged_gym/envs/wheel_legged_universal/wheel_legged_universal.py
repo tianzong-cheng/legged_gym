@@ -73,7 +73,6 @@ class WheelLeggedUniversal(WheelLegged):
                 self.theta_l_dot * self.obs_scales.dof_vel,
                 self.l * self.obs_scales.l,
                 self.l_dot * self.obs_scales.l_dot,
-                self.dof_pos[:, [2, 5]] * self.obs_scales.dof_pos,
                 self.dof_vel[:, [2, 5]] * self.obs_scales.dof_vel,
                 self.commands[:, :3] * self.commands_scale,
                 self.actions,

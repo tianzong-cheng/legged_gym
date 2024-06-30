@@ -742,7 +742,11 @@ class WheelLegged(LeggedRobot):
             requires_grad=False,
         )  # x vel, y vel, yaw vel, heading
         self.commands_scale = torch.tensor(
-            [self.obs_scales.lin_vel, self.obs_scales.lin_vel, self.obs_scales.ang_vel],
+            [
+                self.obs_scales.lin_vel,
+                self.obs_scales.ang_vel,
+                self.obs_scales.height_measurements,
+            ],
             device=self.device,
             requires_grad=False,
         )  # TODO change this

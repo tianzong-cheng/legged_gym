@@ -6,8 +6,8 @@ from legged_gym.envs.wheel_legged.wheel_legged_config import (
 
 class WheelLeggedUniversalCfg(WheelLeggedCfg):
     class env(WheelLeggedCfg.env):
-        num_observations = 27
-        num_privileged_obs = 70
+        num_observations = 25
+        num_privileged_obs = 68
         num_actions = 6  # 4 jonit motors + 2 wheel motors
 
     class commands(WheelLeggedCfg.commands):
@@ -40,7 +40,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
         # So use position control instead of torque control
         control_type = "P"
         stiffness = {"joint": 0.0, "wheel": 0.0}
-        damping = {"joint": 0.0, "wheel": 0.5}
+        damping = {"joint": 0.0, "wheel": 0.2}
         action_scale = 0.5  # Why do we need action scales?
         decimation = 2
 
@@ -51,7 +51,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
 
         action_scale_theta_l = 0.2
         action_scale_l = 0.1
-        action_scale_vel = 20.0
+        action_scale_vel = 10.0
 
         l_offset = 0.25
         f_feedforward = 100.0
