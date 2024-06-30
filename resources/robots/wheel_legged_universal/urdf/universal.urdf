@@ -210,7 +210,7 @@
     <axis
       xyz="0 1 0" />
     <limit
-      effort="5"
+      effort="3.8"
       velocity="1000" />
   </joint>
   <link
@@ -379,7 +379,7 @@
     <axis
       xyz="0 1 0" />
     <limit
-      effort="5"
+      effort="3.8"
       velocity="1000" />
   </joint>
 </robot>
