@@ -46,8 +46,8 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
 
         kp_theta_l = 50.0  # [N*m/rad]
         kd_theta_l = 3.0  # [N*m*s/rad]
-        kp_l = 900.0  # [N/m]
-        kd_l = 20.0  # [N*s/m]
+        kp_l = 1200.0  # [N/m]
+        kd_l = 50.0  # [N*s/m]
 
         action_scale_theta_l = 0.2
         action_scale_l = 0.1
@@ -76,7 +76,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
 
             dof_vel = -5e-5
             dof_acc = -2.5e-7
-            joint_torques = -0.0001
+            joint_torques = -0.00001
             wheel_torques = -0.0001
             action_rate = -0.01
             action_smooth = -0.01

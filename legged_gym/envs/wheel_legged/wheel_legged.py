@@ -848,7 +848,7 @@ class WheelLegged(LeggedRobot):
             return torch.abs(self.base_height - self.commands[:, 2])
         else:
             base_height_error = torch.square(self.base_height - self.commands[:, 2])
-            return torch.exp(-base_height_error / 0.005)
+            return torch.exp(-base_height_error / 0.0004)
 
     def _reward_nominal_state(self):
         # Penalize difference in leg angles
