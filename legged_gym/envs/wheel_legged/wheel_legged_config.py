@@ -68,7 +68,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
         kp_follow = 4
 
     class init_state(LeggedRobotCfg.init_state):
-        pos = [0.0, 0.0, 0.25]  # x,y,z [m]
+        pos = [0.0, 0.0, 0.4]  # x,y,z [m]
         rot = [0.0, 0.0, 0.0, 1.0]  # x,y,z,w [quat]
         lin_vel = [0.0, 0.0, 0.0]  # x,y,z [m/s]
         ang_vel = [0.0, 0.0, 0.0]  # x,y,z [rad/s]

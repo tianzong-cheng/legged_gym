@@ -46,8 +46,8 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
 
         kp_theta_l = 50.0  # [N*m/rad]
         kd_theta_l = 3.0  # [N*m*s/rad]
-        kp_l = 1200.0  # [N/m]
-        kd_l = 50.0  # [N*s/m]
+        kp_l = 500.0  # [N/m]
+        kd_l = 10.0  # [N*s/m]
 
         action_scale_theta_l = 0.2
         action_scale_l = 0.1
@@ -86,6 +86,18 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             theta_limit = -1.0
 
             wheel_slip = -0.01
+
+    class noise(WheelLeggedCfg.noise):
+        add_noise = True
+        noise_level = 1.0  # scales other values
+
+        class noise_scales(WheelLeggedCfg.noise.noise_scales):
+            ang_vel = 0.03
+            theta_l = 0.01
+            theta_l_dot = 1.0
+            l = 0.01
+            l_dot = 0.3
+            dof_vel = 0.3
 
     class parameter:
         class leg:

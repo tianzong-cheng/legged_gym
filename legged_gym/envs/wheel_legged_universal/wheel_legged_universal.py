@@ -195,3 +195,20 @@ class WheelLeggedUniversal(WheelLegged):
         ) / self.l * T
 
         return t_hip, t_knee
+
+    def _get_noise_scale_vec(self, cfg):
+        noise_vec = torch.zeros_like(self.obs_buf[0])
+        self.add_noise = self.cfg.noise.add_noise
+        noise_scales = self.cfg.noise.noise_scales
+        noise_level = self.cfg.noise.noise_level
+        noise_vec[0:3] = noise_scales.ang_vel * noise_level * self.obs_scales.ang_vel
+        noise_vec[3:6] = 0
+        noise_vec[6:8] = noise_scales.theta_l * noise_level * self.obs_scales.dof_pos
+        noise_vec[8:10] = (
+            noise_scales.theta_l_dot * noise_level * self.obs_scales.dof_vel
+        )
+        noise_vec[10:12] = noise_scales.l * noise_level * self.obs_scales.l
+        noise_vec[12:14] = noise_scales.l_dot * noise_level * self.obs_scales.l_dot
+        noise_vec[14:16] = noise_scales.dof_vel * noise_level * self.obs_scales.dof_vel
+        noise_vec[16:25] = 0
+        return noise_vec
