@@ -42,7 +42,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
         stiffness = {"joint": 0.0, "wheel": 0.0}
         damping = {"joint": 0.0, "wheel": 0.2}
         action_scale = 0.5  # Why do we need action scales?
-        decimation = 2
+        decimation = 10
 
         kp_theta_l = 50.0  # [N*m/rad]
         kd_theta_l = 3.0  # [N*m*s/rad]
@@ -98,6 +98,9 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             l = 0.01
             l_dot = 0.3
             dof_vel = 0.3
+
+    class sim(WheelLeggedCfg.sim):
+        dt = 0.001
 
     class parameter:
         class leg:
