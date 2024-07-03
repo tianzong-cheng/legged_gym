@@ -43,7 +43,12 @@ class WheelLegged(LeggedRobot):
         self.render()
         for _ in range(self.cfg.control.decimation):
             self.leg_observer()
-            self.torques = self._compute_torques(self.actions).view(self.torques.shape)
+            self.action_fifo = torch.cat(
+                (self.actions.unsqueeze(1), self.action_fifo[:, :-1, :]), dim=1
+            )
+            self.torques = self._compute_torques(
+                self.action_fifo[torch.arange(self.num_envs), self.action_delay, :]
+            ).view(self.torques.shape)
             self.gym.set_dof_actuation_force_tensor(
                 self.sim, gymtorch.unwrap_tensor(self.torques)
             )
@@ -345,6 +350,72 @@ class WheelLegged(LeggedRobot):
                 props[s].friction = self.friction_coeffs[env_id]
         return props
 
+    def _process_rigid_body_props(self, props, env_id):
+        if self.cfg.domain_rand.randomize_base_mass:
+            if env_id == 0:  # Initialize base_mass_add
+                min_add_mass, max_add_mass = self.cfg.domain_rand.added_mass_range
+                self.base_mass_add = (
+                    torch.rand(
+                        self.num_envs,
+                        dtype=torch.float,
+                        device=self.device,
+                        requires_grad=False,
+                    )
+                    * (max_add_mass - min_add_mass)
+                    + min_add_mass
+                )
+                self.base_mass = props[0].mass + self.base_mass_add
+            props[0].mass += self.base_mass_add[env_id]
+        else:
+            self.base_mass[:] = props[0].mass
+
+        if self.cfg.domain_rand.randomize_base_com:
+            if env_id == 0:  # Initialize base_com_add
+                com_x, com_y, com_z = self.cfg.domain_rand.add_com_range
+                self.base_com_add[:, 0] = (
+                    torch.rand(
+                        self.num_envs,
+                        dtype=torch.float,
+                        device=self.device,
+                        requires_grad=False,
+                    )
+                    * (com_x * 2)
+                    - com_x
+                )
+                self.base_com_add[:, 1] = (
+                    torch.rand(
+                        self.num_envs,
+                        dtype=torch.float,
+                        device=self.device,
+                        requires_grad=False,
+                    )
+                    * (com_y * 2)
+                    - com_y
+                )
+                self.base_com_add[:, 2] = (
+                    torch.rand(
+                        self.num_envs,
+                        dtype=torch.float,
+                        device=self.device,
+                        requires_grad=False,
+                    )
+                    * (com_z * 2)
+                    - com_z
+                )
+            props[0].com.x += self.base_com_add[env_id, 0]
+            props[0].com.y += self.base_com_add[env_id, 1]
+            props[0].com.z += self.base_com_add[env_id, 2]
+
+        if self.cfg.domain_rand.randomize_inertia:
+            for i in range(len(props)):
+                lower_bound, upper_bound = self.cfg.domain_rand.randomize_inertia_range
+                inertia_scale = np.random.uniform(lower_bound, upper_bound)
+                props[i].mass *= inertia_scale
+                props[i].inertia.x.x *= inertia_scale
+                props[i].inertia.y.y *= inertia_scale
+                props[i].inertia.z.z *= inertia_scale
+        return props
+
     def _post_physics_step_callback(self):
         """Callback called before computing terminations, rewards, and observations
         Default behaviour: Compute ang vel command based on target and heading, compute measured terrain heights and randomly push robots
@@ -452,14 +523,11 @@ class WheelLegged(LeggedRobot):
         )
 
         self.torque_leg = (
-            self.cfg.control.kp_theta_l * (theta_l_ref - self.theta_l)
-            - self.cfg.control.kd_theta_l * self.theta_l_dot
+            self.kp_theta_l * (theta_l_ref - self.theta_l)
+            - self.kd_theta_l * self.theta_l_dot
         )
-        self.force_leg = (
-            self.cfg.control.kp_l * (l_ref - self.l)
-            - self.cfg.control.kd_l * self.l_dot
-        )
-        self.torque_wheel = self.d_gains[[2, 5]] * (
+        self.force_leg = self.kp_l * (l_ref - self.l) - self.kd_l * self.l_dot
+        self.torque_wheel = self.d_gains[:, [2, 5]] * (
             wheel_speed_ref - self.dof_vel[:, [2, 5]]
         )
         t_hip, t_knee = self.VMC(
@@ -480,6 +548,25 @@ class WheelLegged(LeggedRobot):
 
         # TODO: Scale?
         return torch.clip(torques, -self.torque_limits, self.torque_limits)
+
+    def _reset_dofs(self, env_ids):
+        """Resets DOF position and velocities of selected environmments
+        Positions are randomly selected within 0.5:1.5 x default positions.
+        Velocities are set to zero.
+
+        Args:
+            env_ids (List[int]): Environemnt ids
+        """
+        self.dof_pos[env_ids] = self.default_dof_pos[env_ids, :]
+        self.dof_vel[env_ids] = 0.0
+
+        env_ids_int32 = env_ids.to(dtype=torch.int32)
+        self.gym.set_dof_state_tensor_indexed(
+            self.sim,
+            gymtorch.unwrap_tensor(self.dof_state),
+            gymtorch.unwrap_tensor(env_ids_int32),
+            len(env_ids_int32),
+        )
 
     def VMC(self, F, T):
         theta_temp = self.theta_l + self.pi / 2
@@ -580,6 +667,15 @@ class WheelLegged(LeggedRobot):
         self.envs = []
         self.friction_coeffs = torch.zeros(
             self.num_envs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.base_mass = torch.zeros(
+            self.num_envs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.base_mass_add = torch.zeros(
+            self.num_envs, dtype=torch.float, device=self.device, requires_grad=False
+        )
+        self.base_com_add = torch.zeros(
+            self.num_envs, 3, dtype=torch.float, device=self.device, requires_grad=False
         )
         for i in range(self.num_envs):
             # create env instance
@@ -701,10 +797,18 @@ class WheelLegged(LeggedRobot):
             requires_grad=False,
         )
         self.p_gains = torch.zeros(
-            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+            self.num_envs,
+            self.num_dof,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
         )
         self.d_gains = torch.zeros(
-            self.num_actions, dtype=torch.float, device=self.device, requires_grad=False
+            self.num_envs,
+            self.num_dof,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
         )
         self.actions = torch.zeros(
             self.num_envs,
@@ -804,26 +908,178 @@ class WheelLegged(LeggedRobot):
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(
-            self.num_dof, dtype=torch.float, device=self.device, requires_grad=False
+            self.num_envs,
+            self.num_dof,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
         )
         for i in range(self.num_dofs):
             name = self.dof_names[i]
             angle = self.cfg.init_state.default_joint_angles[name]
-            self.default_dof_pos[i] = angle
+            self.default_dof_pos[:, i] = angle
             found = False
             for dof_name in self.cfg.control.stiffness.keys():
                 if dof_name in name:
-                    self.p_gains[i] = self.cfg.control.stiffness[dof_name]
-                    self.d_gains[i] = self.cfg.control.damping[dof_name]
+                    self.p_gains[:, i] = self.cfg.control.stiffness[dof_name]
+                    self.d_gains[:, i] = self.cfg.control.damping[dof_name]
                     found = True
             if not found:
-                self.p_gains[i] = 0.0
-                self.d_gains[i] = 0.0
+                self.p_gains[:, i] = 0.0
+                self.d_gains[:, i] = 0.0
                 if self.cfg.control.control_type in ["P", "V"]:
                     print(
                         f"PD gain of joint {name} were not defined, setting them to zero"
                     )
-        self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
+
+        self.kp_theta_l = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.kd_theta_l = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.kp_l = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.kd_l = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.torques_scale = torch.ones(
+            self.num_envs,
+            self.num_dof,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.kp_theta_l[:] = self.cfg.control.kp_theta_l
+        self.kd_theta_l[:] = self.cfg.control.kd_theta_l
+        self.kp_l[:] = self.cfg.control.kp_l
+        self.kd_l[:] = self.cfg.control.kd_l
+        if self.cfg.domain_rand.randomize_kp:
+            (
+                p_gains_scale_min,
+                p_gains_scale_max,
+            ) = self.cfg.domain_rand.gain_kp_range
+            self.p_gains *= torch_rand_float(
+                p_gains_scale_min,
+                p_gains_scale_max,
+                self.p_gains.shape,
+                device=self.device,
+            )
+            self.kp_theta_l *= torch_rand_float(
+                p_gains_scale_min,
+                p_gains_scale_max,
+                self.kp_theta_l.shape,
+                device=self.device,
+            )
+            self.kp_l *= torch_rand_float(
+                p_gains_scale_min,
+                p_gains_scale_max,
+                self.kp_l.shape,
+                device=self.device,
+            )
+        if self.cfg.domain_rand.randomize_kd:
+            (
+                d_gains_scale_min,
+                d_gains_scale_max,
+            ) = self.cfg.domain_rand.gain_kd_range
+            self.d_gains *= torch_rand_float(
+                d_gains_scale_min,
+                d_gains_scale_max,
+                self.d_gains.shape,
+                device=self.device,
+            )
+            self.kd_theta_l *= torch_rand_float(
+                d_gains_scale_min,
+                d_gains_scale_max,
+                self.kd_theta_l.shape,
+                device=self.device,
+            )
+            self.kd_l *= torch_rand_float(
+                d_gains_scale_min,
+                d_gains_scale_max,
+                self.kd_l.shape,
+                device=self.device,
+            )
+        if self.cfg.domain_rand.randomize_motor_torque:
+            (
+                torque_scale_min,
+                torque_scale_max,
+            ) = self.cfg.domain_rand.gain_motor_torque_range
+            self.torques_scale *= torch_rand_float(
+                torque_scale_min,
+                torque_scale_max,
+                self.torques_scale.shape,
+                device=self.device,
+            )
+        if self.cfg.domain_rand.randomize_default_dof_pos:
+            self.default_dof_pos += torch_rand_float(
+                self.cfg.domain_rand.randomize_default_dof_pos_range[0],
+                self.cfg.domain_rand.randomize_default_dof_pos_range[1],
+                (self.num_envs, self.num_dof),
+                device=self.device,
+            )
+        self.action_delay = torch.zeros(
+            self.num_envs,
+            dtype=torch.long,
+            device=self.device,
+            requires_grad=False,
+        )
+        if self.cfg.domain_rand.randomize_action_delay:
+            action_delay = torch.round(
+                torch_rand_float(
+                    self.cfg.domain_rand.delay_ms_range[0] / 1000 / self.sim_params.dt,
+                    self.cfg.domain_rand.delay_ms_range[1] / 1000 / self.sim_params.dt,
+                    (self.num_envs, 1),
+                    device=self.device,
+                )
+            ).squeeze(-1)
+            self.action_delay = action_delay.long()
+        delay_max = (
+            np.int64(
+                np.ceil(
+                    self.cfg.domain_rand.delay_ms_range[1] / 1000 / self.sim_params.dt
+                )
+            )
+            + 1  # Original code by WHX may lead to index OOB if dt is set to 1 ms
+        )
+        self.action_fifo = torch.zeros(
+            (self.num_envs, delay_max, self.cfg.env.num_actions),
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+
+        self.theta_l_dot_filtered = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
+        self.l_dot_filtered = torch.zeros(
+            self.num_envs,
+            2,
+            dtype=torch.float,
+            device=self.device,
+            requires_grad=False,
+        )
 
     def _reward_tracking_lin_vel(self):
         # Tracking of linear velocity commands (x axes)

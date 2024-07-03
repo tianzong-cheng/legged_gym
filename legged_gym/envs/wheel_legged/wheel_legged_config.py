@@ -8,7 +8,7 @@ class WheelLeggedCfg(LeggedRobotCfg):
         num_actions = 6  # 4 jonit motors + 2 wheel motors
 
     class terrain:
-        mesh_type = "trimesh"  # "heightfield" # none, plane, heightfield or trimesh
+        mesh_type = "plane"  # "heightfield" # none, plane, heightfield or trimesh
         horizontal_scale = 0.1  # [m]
         vertical_scale = 0.005  # [m]
         border_size = 25  # [m]
@@ -135,6 +135,29 @@ class WheelLeggedCfg(LeggedRobotCfg):
         push_interval_s = 7
         max_push_vel_xy = 2
 
+        # Self defined randomization
+
+        randomize_base_com = True
+        add_com_range = [0.05, 0.05, 0.05]
+
+        randomize_inertia = True
+        randomize_inertia_range = [0.8, 1.2]
+
+        randomize_kp = True
+        gain_kp_range = [0.9, 1.1]
+
+        randomize_kd = True
+        gain_kd_range = [0.9, 1.1]
+
+        randomize_motor_torque = True
+        gain_motor_torque_range = [0.9, 1.1]
+
+        randomize_default_dof_pos = True
+        randomize_default_dof_pos_range = [-0.05, 0.05]
+
+        randomize_action_delay = True
+        delay_ms_range = [0, 30]
+
     class rewards(LeggedRobotCfg.rewards):
         class scales:
             tracking_lin_vel = 1.0
@@ -184,6 +207,9 @@ class WheelLeggedCfg(LeggedRobotCfg):
         clip_observations = 100.0
         clip_actions = 100.0
 
+    class sim(LeggedRobotCfg.sim):
+        dt = 0.005
+
     class parameter:
         class leg:
             l_thigh = 0.15
@@ -223,7 +249,7 @@ class WheelLeggedCfgPPO(LeggedRobotCfgPPO):
         policy_class_name = "ActorCritic"
         algorithm_class_name = "PPO"
         num_steps_per_env = 48  # per iteration
-        max_iterations = 2000  # number of policy updates
+        max_iterations = 10000  # number of policy updates
 
         # logging
         save_interval = 50  # check for potential saves every this many iterations

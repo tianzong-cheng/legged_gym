@@ -7,7 +7,7 @@ from legged_gym.envs.wheel_legged.wheel_legged_config import (
 class WheelLeggedUniversalCfg(WheelLeggedCfg):
     class env(WheelLeggedCfg.env):
         num_observations = 25
-        num_privileged_obs = 68
+        num_privileged_obs = 73
         num_actions = 6  # 4 jonit motors + 2 wheel motors
 
     class commands(WheelLeggedCfg.commands):
@@ -42,7 +42,6 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
         stiffness = {"joint": 0.0, "wheel": 0.0}
         damping = {"joint": 0.0, "wheel": 0.2}
         action_scale = 0.5  # Why do we need action scales?
-        decimation = 10
 
         kp_theta_l = 50.0  # [N*m/rad]
         kd_theta_l = 3.0  # [N*m*s/rad]
@@ -100,7 +99,7 @@ class WheelLeggedUniversalCfg(WheelLeggedCfg):
             dof_vel = 0.3
 
     class sim(WheelLeggedCfg.sim):
-        dt = 0.001
+        dt = 0.005
 
     class parameter:
         class leg:

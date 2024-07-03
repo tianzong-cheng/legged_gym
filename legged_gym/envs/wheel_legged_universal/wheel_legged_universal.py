@@ -1,9 +1,23 @@
 from legged_gym.envs.wheel_legged.wheel_legged import WheelLegged
+from legged_gym.envs.wheel_legged_universal.wheel_legged_universal_config import (
+    WheelLeggedUniversalCfg,
+)
 
 import torch
 
 
 class WheelLeggedUniversal(WheelLegged):
+    def __init__(
+        self,
+        cfg: WheelLeggedUniversalCfg,
+        sim_params,
+        physics_engine,
+        sim_device,
+        headless,
+    ):
+        self.cfg = cfg
+        super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
+
     def leg_forward_kinematics(self, theta_hip, theta_knee):
         wheel_x = -self.cfg.parameter.leg.l_thigh * torch.sin(
             self.pi - theta_hip
@@ -50,6 +64,11 @@ class WheelLeggedUniversal(WheelLegged):
         self.l_dot = (l_hat - self.l) / dt
         self.theta_l_dot = (theta_l_hat - self.theta_l) / dt
 
+        self.l_dot_filtered = self.l_dot_filtered * 0.9 + self.l_dot * 0.1
+        self.theta_l_dot_filtered = (
+            self.theta_l_dot_filtered * 0.9 + self.theta_l_dot * 0.1
+        )
+
     def compute_observations(self):
         """
         3   base_ang_vel: Body IMU feedback
@@ -94,6 +113,9 @@ class WheelLeggedUniversal(WheelLegged):
                 heights,
                 self.torques * self.obs_scales.torque,
                 self.friction_coeffs.view(self.num_envs, 1),
+                self.base_mass_add.unsqueeze(1),
+                self.base_com_add,
+                self.action_delay.float().unsqueeze(1),
                 self.slip_left.unsqueeze(1),
                 self.slip_right.unsqueeze(1),
             ),
@@ -145,17 +167,14 @@ class WheelLeggedUniversal(WheelLegged):
         )
 
         self.torque_leg = (
-            self.cfg.control.kp_theta_l * (theta_l_ref - self.theta_l)
-            - self.cfg.control.kd_theta_l * self.theta_l_dot
+            self.kp_theta_l * (theta_l_ref - self.theta_l)
+            - self.kd_theta_l * self.theta_l_dot_filtered
         )
-        self.force_leg = (
-            self.cfg.control.kp_l * (l_ref - self.l)
-            - self.cfg.control.kd_l * self.l_dot
-        )
-        self.torque_wheel = self.d_gains[[2, 5]] * (
+        self.force_leg = self.kp_l * (l_ref - self.l) - self.kd_l * self.l_dot_filtered
+        self.torque_wheel = self.d_gains[:, [2, 5]] * (
             wheel_speed_ref - self.dof_vel[:, [2, 5]]
         )
-        self.torque_wheel = torch.clip(self.torque_wheel, -5, 5)
+        self.torque_wheel = torch.clip(self.torque_wheel, -4, 4)
 
         t_hip, t_knee = self.VMC(
             self.force_leg + self.cfg.control.f_feedforward, self.torque_leg
@@ -173,8 +192,9 @@ class WheelLeggedUniversal(WheelLegged):
             axis=1,
         )
 
-        # TODO: Scale?
-        return torch.clip(torques, -self.torque_limits, self.torque_limits)
+        return torch.clip(
+            torques * self.torques_scale, -self.torque_limits, self.torque_limits
+        )
 
     def VMC(self, F, T):
         A = self.cfg.parameter.leg.l_thigh
